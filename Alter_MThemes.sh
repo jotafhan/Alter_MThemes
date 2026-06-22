@@ -53,9 +53,8 @@ MODULOS=(
     "cat_3_logo_center.sh"
     "cat_4_theme_hub.sh"
     "cat_5_backup_center.sh"
-    "cat_6_performance_center.sh"
-    "cat_7_interface_ui.sh"
-    "cat_8_atualizador.sh"
+    "cat_6_interface_ui.sh"
+    "cat_7_atualizador.sh"
 )
 
 for MOD in "${MODULOS[@]}"; do
@@ -137,8 +136,14 @@ SAIR      : encerra" \
                 18 66 >"$CURR_TTY"
 
             _HOOK_RET=$?
-            # Normaliza manualmente para nao depender de NORM_RET_MENU
-            [ $_HOOK_RET -eq 255 ] && _HOOK_RET=1
+            # Normaliza ESC (255) como IGNORAR (0), nao como SAIR (1).
+            # Antes, ESC fechava o Alter_MThemes inteiro sem aviso —
+            # diferente de como ESC se comporta em todo o resto do
+            # projeto (onde sempre equivale a VOLTAR/cancelar a acao
+            # atual, nunca a encerrar o programa). Isso e o que fazia
+            # o botao B "nao funcionar" aqui: o usuario esperava so
+            # fechar o aviso e o app inteiro encerrava.
+            [ $_HOOK_RET -eq 255 ] && _HOOK_RET=0
 
             case "$_HOOK_RET" in
                 0)  # IGNORAR — continua normalmente
@@ -186,8 +191,8 @@ ${SEP}"
         BODY_STATUS="${SEP}"
     fi
 
-    # Menu exibe numeros sequenciais mas internamente
-    # mapeamos para os numeros originais que as funcoes esperam
+    # Menu exibe numeros sequenciais que agora coincidem
+    # exatamente com a CATEGORIA/funcao de cada modulo
     ITEM_SEL=$(dialog --output-fd 1 \
         --backtitle "$BT_MAIN" \
         --title "${MENU_TITULO:- MENU PRINCIPAL }" \
@@ -202,10 +207,9 @@ ${SEP}"
         3 "Logo Center" \
         4 "Theme Hub" \
         5 "Backup Center" \
-        6 "Performance Center" \
-        7 "Interface do Usuario (UI)" \
-        8 "Atualizador" \
-        9 "Salvar e Reiniciar o ES" \
+        6 "Interface do Usuario (UI)" \
+        7 "Atualizador" \
+        8 "Salvar e Reiniciar o ES" \
         2>"$CURR_TTY")
     RET_MENU=$?
     NORM_RET_MENU
@@ -213,7 +217,7 @@ ${SEP}"
     [ $RET_MENU -eq 1 ]   && ExitAll
     [ $RET_MENU -eq 3 ]   && ExitAll
     [ $RET_MENU -eq 255 ] && ExitAll
-    if [ "$ITEM_SEL" = "9" ]; then
+    if [ "$ITEM_SEL" = "8" ]; then
         printf "\033c" > "$CURR_TTY"
         printf "[*] Reiniciando o EmulationStation...\n" > "$CURR_TTY"
         pkill -f "gptokeyb" 2>/dev/null || true
@@ -224,16 +228,15 @@ ${SEP}"
         exit 0
     fi
 
-    # Mapeia item selecionado para CATEGORIA original
+    # Mapeia item selecionado para CATEGORIA (agora 1:1, sem desencontro)
     case "$ITEM_SEL" in
         1) CATEGORIA="1"; categoria_1 ;;
         2) CATEGORIA="2"; categoria_2 ;;
         3) CATEGORIA="3"; categoria_3 ;;
         4) CATEGORIA="4"; categoria_4 ;;
-        5) CATEGORIA="6"; categoria_6 ;;   # backup_center  (espera CATEGORIA=6)
-        6) CATEGORIA="7"; categoria_7 ;;   # performance_center (espera CATEGORIA=7)
-        7) categoria_8 ;;                  # interface_ui
-        8) categoria_9 ;;                  # atualizador
+        5) CATEGORIA="5"; categoria_5 ;;   # backup_center
+        6) categoria_6 ;;                  # interface_ui
+        7) categoria_7 ;;                  # atualizador
     esac
 
 done
