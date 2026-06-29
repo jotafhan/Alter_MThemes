@@ -148,23 +148,35 @@ AplicarEmBloco() {
             if [ "$TAG" = "color" ] || [ "$TAG" = "textColor" ] || [ "$TAG" = "selectedColor" ]; then
                 awk -v tag="$TAG" -v val="$VALOR" '
                     # Blocos de texto puro → altera color
-                    match($0, /<text[ >]/) && $0 !~ /name="top_label"/ { dentro_texto=1 }
-                    /<textlist/  { dentro_texto=1 }
+                    match($0, /<text[ >]/) && $0 !~ /name="top_label"/ { dentro_texto=1; achou=0 }
+                    /<textlist/  { dentro_texto=1; achou=0 }
 
                     # Blocos que NÃO são texto → nunca altera
                     /<carousel/  { dentro_texto=0; dentro_bg=1 }
                     /<background>/ || /<image[^>]*>/ || /<video[^>]*>/ {
                         dentro_texto=0; dentro_bg=1 }
 
+                    # Altera color se a tag ja existir dentro do bloco de texto
+                    dentro_texto && !dentro_bg && $0 ~ "<"tag">" {
+                        sub("<"tag">[^<]*</"tag">", "<"tag">"val"</"tag">")
+                        achou=1
+                    }
+
+                    # Se o bloco de texto fecha sem a tag ter sido encontrada,
+                    # insere a tag antes do fechamento (corrige falha silenciosa
+                    # em temas que nao definem essa tag nesse bloco)
+                    dentro_texto && !dentro_bg && (/<\/textlist>/ || /<\/text>/) && !achou {
+                        match($0, /^[ \t]*/)
+                        indent = substr($0, 1, RLENGTH) "    "
+                        print indent "<" tag ">" val "</" tag ">"
+                        achou=1
+                    }
+
                     # Fecha blocos
                     /<\/textlist>/ || /<\/text>/   { dentro_texto=0 }
                     /<\/carousel>/ || /<\/background>/ || /<\/image>/ || /<\/video>/ {
                         dentro_bg=0 }
 
-                    # Altera color apenas dentro de texto, nunca dentro de bg/carousel
-                    dentro_texto && !dentro_bg && $0 ~ "<"tag">" {
-                        sub("<"tag">[^<]*</"tag">", "<"tag">"val"</"tag">")
-                    }
                     { print }
                 ' "$XML_FILE" > "${XML_FILE}.tmp" \
                 && mv "${XML_FILE}.tmp" "$XML_FILE"
@@ -177,7 +189,14 @@ AplicarEmBloco() {
                     "s|<selectedColor>[^<]*</selectedColor>|<selectedColor>${VALOR}</selectedColor>|g" \
                     "$XML_FILE" 2>/dev/null || true
             else
-                # fontSize, fontStyle, opacity etc — aplica globalmente sem restrição
+                # fontSize, fontStyle, opacity etc — aplica globalmente sem restrição.
+                # NOTA: este ramo nao tem um bloco XML delimitado (abre/fecha) para
+                # decidir ONDE inserir a tag caso ela nao exista em lugar nenhum do
+                # tema — diferente dos casos 2-5, que tem um bloco claro. Por isso
+                # continua apenas substituindo ocorrencias existentes; se a tag nao
+                # existir em nenhum lugar do XML, nada e alterado (mesma limitacao
+                # de antes). Use os alvos 2-5 (gamelist/carousel/systemInfo/menu)
+                # quando for necessario garantir a insercao da tag.
                 sed -i -E "s|${REGEX_TAG}|${REPLACE_TAG}|g" \
                     "$XML_FILE" 2>/dev/null || true
             fi ;;
@@ -185,9 +204,17 @@ AplicarEmBloco() {
             awk -v bloco_a='<textlist[^>]*name="gamelist"' \
                 -v bloco_f='</textlist>' \
                 -v tag="$TAG" -v val="$VALOR" '
-                $0 ~ bloco_a { dentro=1 }
+                $0 ~ bloco_a { dentro=1; achou=0 }
                 dentro && $0 ~ "<"tag">" {
-                    sub("<"tag">[^<]*</"tag">", "<"tag">"val"</"tag">") }
+                    sub("<"tag">[^<]*</"tag">", "<"tag">"val"</"tag">")
+                    achou=1
+                }
+                dentro && $0 ~ bloco_f && !achou {
+                    match($0, /^[ \t]*/)
+                    indent = substr($0, 1, RLENGTH) "    "
+                    print indent "<" tag ">" val "</" tag ">"
+                    achou=1
+                }
                 $0 ~ bloco_f { dentro=0 }
                 { print }
             ' "$XML_FILE" > "${XML_FILE}.tmp" \
@@ -199,15 +226,25 @@ AplicarEmBloco() {
                 # Entra em blocos de texto da view system (menu principal)
                 /<text[^>]*name="sys_line[12]"/ ||
                 /<text[^>]*name="systemInfo"/ ||
-                /<text[^>]*name="sys_line"/ { dentro=1 }
-
-                # Fecha bloco de texto
-                /<\/text>/ { dentro=0 }
+                /<text[^>]*name="sys_line"/ { dentro=1; achou=0 }
 
                 # Altera a tag apenas dentro dos blocos de texto
                 dentro && $0 ~ "<"tag">" {
                     sub("<"tag">[^<]*</"tag">", "<"tag">"val"</"tag">")
+                    achou=1
                 }
+
+                # Insere a tag antes do fechamento se nao foi encontrada
+                dentro && /<\/text>/ && !achou {
+                    match($0, /^[ \t]*/)
+                    indent = substr($0, 1, RLENGTH) "    "
+                    print indent "<" tag ">" val "</" tag ">"
+                    achou=1
+                }
+
+                # Fecha bloco de texto
+                /<\/text>/ { dentro=0 }
+
                 { print }
             ' "$XML_FILE" > "${XML_FILE}.tmp" \
             && mv "${XML_FILE}.tmp" "$XML_FILE"
@@ -215,10 +252,18 @@ AplicarEmBloco() {
             # fontPath dentro do carousel (fonte do nome do sistema no carousel)
             if [ "$TAG" = "fontPath" ]; then
                 awk -v tag="$TAG" -v val="$VALOR" '
-                    /<carousel[^>]*name="systemcarousel"/ { dentro=1 }
-                    /<\/carousel>/ { dentro=0 }
+                    /<carousel[^>]*name="systemcarousel"/ { dentro=1; achou=0 }
                     dentro && $0 ~ "<"tag">" {
-                        sub("<"tag">[^<]*</"tag">", "<"tag">"val"</"tag">") }
+                        sub("<"tag">[^<]*</"tag">", "<"tag">"val"</"tag">")
+                        achou=1
+                    }
+                    dentro && /<\/carousel>/ && !achou {
+                        match($0, /^[ \t]*/)
+                        indent = substr($0, 1, RLENGTH) "    "
+                        print indent "<" tag ">" val "</" tag ">"
+                        achou=1
+                    }
+                    /<\/carousel>/ { dentro=0 }
                     { print }
                 ' "$XML_FILE" > "${XML_FILE}.tmp" \
                 && mv "${XML_FILE}.tmp" "$XML_FILE"
@@ -227,19 +272,35 @@ AplicarEmBloco() {
             awk -v bloco_a='<text[^>]*name="systemInfo"' \
                 -v bloco_f='</text>' \
                 -v tag="$TAG" -v val="$VALOR" '
-                $0 ~ bloco_a { dentro=1 }
+                $0 ~ bloco_a { dentro=1; achou=0 }
                 dentro && $0 ~ "<"tag">" {
-                    sub("<"tag">[^<]*</"tag">", "<"tag">"val"</"tag">") }
+                    sub("<"tag">[^<]*</"tag">", "<"tag">"val"</"tag">")
+                    achou=1
+                }
+                dentro && $0 ~ bloco_f && !achou {
+                    match($0, /^[ \t]*/)
+                    indent = substr($0, 1, RLENGTH) "    "
+                    print indent "<" tag ">" val "</" tag ">"
+                    achou=1
+                }
                 $0 ~ bloco_f { dentro=0 }
                 { print }
             ' "$XML_FILE" > "${XML_FILE}.tmp" \
             && mv "${XML_FILE}.tmp" "$XML_FILE" ;;
         5) # view menu — altera APENAS <menuText>, nunca <menuBackground>
             awk -v tag="$TAG" -v val="$VALOR" '
-                /<menuText[^>]*>/    { dentro=1 }
-                /<\/menuText>/       { dentro=0 }
+                /<menuText[^>]*>/    { dentro=1; achou=0 }
                 dentro && $0 ~ "<"tag">" {
-                    sub("<"tag">[^<]*</"tag">", "<"tag">"val"</"tag">") }
+                    sub("<"tag">[^<]*</"tag">", "<"tag">"val"</"tag">")
+                    achou=1
+                }
+                dentro && /<\/menuText>/ && !achou {
+                    match($0, /^[ \t]*/)
+                    indent = substr($0, 1, RLENGTH) "    "
+                    print indent "<" tag ">" val "</" tag ">"
+                    achou=1
+                }
+                /<\/menuText>/       { dentro=0 }
                 { print }
             ' "$XML_FILE" > "${XML_FILE}.tmp" \
             && mv "${XML_FILE}.tmp" "$XML_FILE" ;;
