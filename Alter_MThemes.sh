@@ -37,8 +37,50 @@ if [ -x /opt/inttools/gptokeyb ]; then
     [[ -e /dev/uinput ]] && chmod 666 /dev/uinput 2>/dev/null || true
     export SDL_GAMECONTROLLERCONFIG_FILE="/opt/inttools/gamecontrollerdb.txt"
     pkill -f "gptokeyb -1 $SCRIPT_NAME" 2>/dev/null || true
+
+    # Gera o keys.gptk do Alter_MThemes em runtime, em vez de
+    # depender de um arquivo .gptk transferido separadamente
+    # (sujeito a vir com extensao errada, BOM ou quebra de linha
+    # CRLF e o gptokeyb nao reconhecer o conteudo). Isso tambem
+    # evita depender do /opt/inttools/keys.gptk global, que em
+    # alguns firmwares vem com "b" mapeado para backspace/repeat
+    # em vez de esc, fazendo o botao VOLTAR parecer travado
+    # dentro do dialog.
+    GPTK_FILE="$LIB_DIR/keys_alter_mthemes.gptk"
+    mkdir -p "$LIB_DIR" 2>/dev/null || true
+    cat > "$GPTK_FILE" << 'GPTKEOF'
+back = esc
+start = enter
+a = enter
+b = esc
+x = space
+y = space
+l1 = pageup
+l2 = space
+l3 = space
+r1 = pagedown
+r2 = space
+r3 = space
+up = up
+down = down
+left = left
+right = right
+left_analog_up = up
+left_analog_down = down
+left_analog_left = left
+left_analog_right = right
+right_analog_up = space
+right_analog_down = space
+right_analog_left = space
+right_analog_right = space
+GPTKEOF
+    # Fallback para o keys.gptk global apenas se a geracao falhar
+    # (ex: particao somente leitura) — preserva o comportamento
+    # anterior nesse caso extremo.
+    [ ! -s "$GPTK_FILE" ] && GPTK_FILE="/opt/inttools/keys.gptk"
+
     /opt/inttools/gptokeyb -1 "$SCRIPT_NAME" \
-        -c "/opt/inttools/keys.gptk" >/dev/null 2>&1 &
+        -c "$GPTK_FILE" >/dev/null 2>&1 &
 fi
 
 # ---------------------------------------------------------
