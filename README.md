@@ -2,7 +2,7 @@
 
 Theme customizer for **EmulationStation** running on **DarkOS** on the **R36S**, via a `dialog`/ncurses TUI that is 100% navigable by D-pad — no physical keyboard required.
 
-> Current version: `7.0.1`
+> Current version: `7.0.4`
 
 ---
 
