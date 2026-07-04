@@ -12,7 +12,7 @@ categoria_3() {
             NUM_LOGOS_USER=$(find "$LOGOS_DIR" -maxdepth 1 \
                 -type f \( -iname "*.png" -o -iname "*.svg" \) 2>/dev/null | wc -l)
             NUM_LOGOS_BAK=$(find "$LOGOS_BAK_DIR" -maxdepth 1 \
-                -type f 2>/dev/null | wc -l)
+                -type f -o -type d -mindepth 1 2>/dev/null | wc -l)
 
             DIALOG_MENU MENU_LOGO \
     "$BT" " LOGOS DOS SISTEMAS " \
@@ -33,7 +33,7 @@ categoria_3() {
             [ $RET -eq 3 ] && break
 
             if [ "$MENU_LOGO" = "1" ]; then
-                mapfile -t LOGOS_USER < <(find "$LOGOS_DIR" -maxdepth 1 -type f \
+                mapfile -t LOGOS_USER < <(find "$LOGOS_DIR" -type f \
                     \( -iname "*.png" -o -iname "*.svg" -o -iname "*.jpg" \) \
                     2>/dev/null | sort)
                 if [ ${#LOGOS_USER[@]} -eq 0 ]; then
@@ -58,6 +58,12 @@ categoria_3() {
                 cp "$LOGO_SRC" "$ASSETS_DIR/$LOGO_NOME" 2>/dev/null || true
                 [ -d "$SISTEMA_DIR" ] && cp "$LOGO_SRC" "$SISTEMA_DIR/logo.png" 2>/dev/null || true
                 SISTEMA_XML="$SISTEMA_DIR/theme.xml"
+                # NOTA: sem bloco XML delimitado conhecido para o <image name="logo">
+                # do tema do sistema — se a tag <path> de logo nao existir em nenhum
+                # lugar do arquivo, esta substituicao nao tem efeito (mesma limitacao
+                # documentada em core.sh/AplicarEmBloco). Nao e seguro inserir um
+                # <image name="logo"> inteiro as cegas sem saber pos/size esperados
+                # pelo tema do sistema.
                 [ -f "$SISTEMA_XML" ] && sed -i -E \
                     "s|<path>[^<]*(logo|titlelogo)[^<]*</path>|<path>./$LOGO_NOME</path>|g" \
                     "$SISTEMA_XML" 2>/dev/null || true
@@ -220,10 +226,10 @@ categoria_3() {
                        PACK_NOME="Carbon (RetroPie)" ; PACK_EXT="svg\|png" ;;
                     3) PACK_URL="https://github.com/anthonycaccese/es-theme-art-book/archive/refs/heads/master.zip"
                        PACK_NOME="Art Book" ; PACK_EXT="svg\|png" ;;
-                    4) PACK_URL="https://github.com/fagnerpc/Alekfull-NX/archive/refs/heads/main.zip"
+                    4) PACK_URL="https://github.com/fagnerpc/Alekfull-NX/archive/refs/heads/master.zip"
                        PACK_NOME="Alekfull NX" ; PACK_EXT="png\|svg" ;;
-                    5) PACK_URL="https://github.com/Luxray5474/switch-like/archive/refs/heads/master.zip"
-                       PACK_NOME="Switch Like" ; PACK_EXT="png\|svg" ;;
+                    5) PACK_URL="https://github.com/lilbud/es-theme-switch/archive/refs/heads/master.zip"
+                       PACK_NOME="Switch (lilbud)" ; PACK_EXT="png\|svg" ;;
                     6) PACK_URL="https://github.com/HVR88/Monochrome-Gaming-Logos/archive/refs/heads/master.zip"
                        PACK_NOME="Monochrome SVG" ; PACK_EXT="svg" ;;
                     *) continue ;;
@@ -256,17 +262,21 @@ categoria_3() {
                     printf "[*] Extraindo logos...\n" > "$CURR_TTY"
                     mkdir -p "$PACK_DIR" 2>/dev/null || true
                     unzip -q "$PACK_ZIP" -d "$PACK_DIR" 2>/dev/null || true
+                    # Salva em subpasta propria para que opcao 9 possa listar por pack
+                    PACK_NOME_DIR=$(echo "$PACK_NOME" | tr ' ' '_' | tr '[:upper:]' '[:lower:]')
+                    PACK_DEST_DIR="$LOGOS_DIR/$PACK_NOME_DIR"
+                    mkdir -p "$PACK_DEST_DIR" 2>/dev/null || true
                     COPIADOS_P=0
                     while IFS= read -r -d '' img; do
                         DEST_NOME=$(basename "$img" | tr '[:upper:]' '[:lower:]' | tr ' ' '_')
-                        cp "$img" "$LOGOS_DIR/$DEST_NOME" 2>/dev/null && \
+                        cp "$img" "$PACK_DEST_DIR/$DEST_NOME" 2>/dev/null && \
                             COPIADOS_P=$(( COPIADOS_P + 1 ))
                     done < <(find "$PACK_DIR" -type f \
                         \( -iname "*.png" -o -iname "*.svg" \) \
                         -print0 2>/dev/null)
                     rm -rf "$PACK_ZIP" "$PACK_DIR" 2>/dev/null || true
                     DIALOG_MSG "$BT" " DOWNLOAD CONCLUIDO " 11 62 \
-                        "Pack: $PACK_NOME\n$COPIADOS_P logo(s) salvo(s) em:\n$LOGOS_DIR\n\nUse a opcao 1 para instalar os logos."
+                        "Pack: $PACK_NOME\n$COPIADOS_P logo(s) salvo(s) em:\n$PACK_DEST_DIR\n\nUse a opcao 1 para instalar os logos."
                 else
                     rm -f "$PACK_ZIP" 2>/dev/null || true
                     DIALOG_MSG "$BT" " ERRO NO DOWNLOAD " 11 62 \
@@ -297,100 +307,11 @@ categoria_3() {
         # OPCAO 9 — Apagar Pack de Logos inteiro
         # --------------------------------------------------
         if [ "$MENU_LOGO" = "9" ]; then
-            mapfile -t PACKS_DISP < <(find "$LOGOS_BAK_DIR" -maxdepth 1 \
+            mapfile -t PACKS_DISP < <(find "$LOGOS_DIR" -maxdepth 1 \
                 -mindepth 1 -type d 2>/dev/null | sort)
             if [ ${#PACKS_DISP[@]} -eq 0 ]; then
-                DIALOG_MSG "$BT" " APAGAR PACK " 8 55 \
-                    "Nenhum pack de logos encontrado em:\n$LOGOS_BAK_DIR"
-                continue
-            fi
-            LISTA_PACK=(); IDX=1
-            for pd in "${PACKS_DISP[@]}"; do
-                NOME_PACK=$(basename "$pd")
-                QTD=$(find "$pd" -type f \( -iname "*.png" -o -iname "*.svg" \) \
-                    2>/dev/null | wc -l)
-                LISTA_PACK+=("$IDX" "$NOME_PACK  ($QTD arquivo(s))")
-                (( IDX++ ))
-            done
-            PACK_SEL=$(dialog --output-fd 1 \
-                --backtitle "$BT" --title " APAGAR PACK DE LOGOS " \
-                --ok-label "APAGAR" --cancel-label "CANCELAR" \
-                --menu "Selecione o pack a apagar:" \
-                20 68 8 "${LISTA_PACK[@]}" 2>"$CURR_TTY")
-            RET=$? ; NORM_RET
-            [ $RET -eq 1 ] && continue
-            [ $RET -eq 3 ] && continue
-            PACK_IDX=$(( PACK_SEL - 1 ))
-            PACK_PATH="${PACKS_DISP[$PACK_IDX]}"
-            PACK_NOME=$(basename "$PACK_PATH")
-            QTD_PACK=$(find "$PACK_PATH" -type f \( -iname "*.png" -o -iname "*.svg" \) \
-                2>/dev/null | wc -l)
-            dialog --output-fd 1 \
-                --backtitle "$BT" --title " CONFIRMAR EXCLUSAO " \
-                --yes-label "APAGAR" --no-label "CANCELAR" \
-                --yesno \
-"Tem certeza que deseja apagar o pack:\n\n$PACK_NOME\n\n$QTD_PACK arquivo(s) serao removidos permanentemente." \
-                10 60 2>"$CURR_TTY"
-            [ $? -ne 0 ] && continue
-            rm -rf "$PACK_PATH" 2>/dev/null
-            DIALOG_MSG "$BT" " PACK APAGADO " 7 55 \
-                "Pack removido com sucesso:\n$PACK_NOME"
-            continue
-        fi
-
-        # --------------------------------------------------
-        # OPCAO 10 — Apagar Logo Especifico
-        # --------------------------------------------------
-        if [ "$MENU_LOGO" = "10" ]; then
-            mapfile -t LOGOS_USER < <(find "$LOGOS_DIR" -maxdepth 1 -type f \
-                \( -iname "*.png" -o -iname "*.svg" -o -iname "*.jpg" \) \
-                2>/dev/null | sort)
-            if [ ${#LOGOS_USER[@]} -eq 0 ]; then
-                DIALOG_MSG "$BT" " APAGAR LOGO " 8 58 \
-                    "Nenhum logo encontrado em:\n$LOGOS_DIR\n\nInstale logos primeiro usando a opcao 1."
-                continue
-            fi
-            LISTA_LOGO=(); IDX=1
-            for lf in "${LOGOS_USER[@]}"; do
-                NOME_L=$(basename "$lf")
-                TAM_L=$(du -sh "$lf" 2>/dev/null | cut -f1 || echo "?")
-                LISTA_LOGO+=("$IDX" "$NOME_L  ($TAM_L)")
-                (( IDX++ ))
-            done
-            LOGO_SEL=$(dialog --output-fd 1 \
-                --backtitle "$BT" --title " APAGAR LOGO ESPECIFICO " \
-                --ok-label "APAGAR" --cancel-label "CANCELAR" \
-                --menu "Selecione o logo a apagar:" \
-                22 68 10 "${LISTA_LOGO[@]}" 2>"$CURR_TTY")
-            RET=$? ; NORM_RET
-            [ $RET -eq 1 ] && continue
-            [ $RET -eq 3 ] && continue
-            LOGO_IDX=$(( LOGO_SEL - 1 ))
-            LOGO_PATH="${LOGOS_USER[$LOGO_IDX]}"
-            LOGO_NOME=$(basename "$LOGO_PATH")
-            dialog --output-fd 1 \
-                --backtitle "$BT" --title " CONFIRMAR EXCLUSAO " \
-                --yes-label "APAGAR" --no-label "CANCELAR" \
-                --yesno \
-"Tem certeza que deseja apagar o logo:\n\n$LOGO_NOME\n\nEsta acao nao pode ser desfeita." \
-                9 58 2>"$CURR_TTY"
-            [ $? -ne 0 ] && continue
-            rm -f "$LOGO_PATH" 2>/dev/null
-            DIALOG_MSG "$BT" " LOGO APAGADO " 7 50 \
-                "Logo removido com sucesso:\n$LOGO_NOME"
-            continue
-        fi
-
-
-        # --------------------------------------------------
-        # OPCAO 9 — Apagar Pack de Logos inteiro
-        # --------------------------------------------------
-        if [ "$MENU_LOGO" = "9" ]; then
-            mapfile -t PACKS_DISP < <(find "$LOGOS_BAK_DIR" -maxdepth 1 \
-                -mindepth 1 -type d 2>/dev/null | sort)
-            if [ ${#PACKS_DISP[@]} -eq 0 ]; then
-                DIALOG_MSG "$BT" " APAGAR PACK " 8 55 \
-                    "Nenhum pack de logos encontrado em:\n$LOGOS_BAK_DIR"
+                DIALOG_MSG "$BT" " APAGAR PACK " 9 58 \
+                    "Nenhum pack encontrado em:\n$LOGOS_DIR\n\nUse a opcao 7 para baixar packs."
                 continue
             fi
             LISTA_PACK=(); IDX=1
