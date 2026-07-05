@@ -1,6 +1,6 @@
 #!/bin/bash
 # =========================================================
-# Alter_MThemes v7.0.5 - Customizador de Tema R36S
+# Alter_MThemes v7.0.3 - Customizador de Tema R36S
 # =========================================================
 
 if [ "$(id -u)" -ne 0 ]; then
@@ -96,6 +96,7 @@ MODULOS=(
     "cat_4_theme_hub.sh"
     "cat_5_backup_center.sh"
     "cat_6_interface_ui.sh"
+    "cat_8_boot_image.sh"
     "cat_7_atualizador.sh"
 )
 
@@ -112,7 +113,7 @@ for MOD in "${MODULOS[@]}"; do
 done
 
 APP_NAME="Alter_MThemes"
-APP_VER="v7.0"
+APP_VER="v7.0.3"
 
 # ==========================================================
 # LOOP DO MENU PRINCIPAL
@@ -250,8 +251,9 @@ ${SEP}"
         4 "Theme Hub" \
         5 "Backup Center" \
         6 "Interface do Usuario (UI)" \
-        7 "Atualizador" \
-        8 "Salvar e Reiniciar o ES" \
+        7 "Boot Center (logo e loading screen)" \
+        8 "Update Alter_MThemes" \
+        9 "Salvar e Reiniciar o ES" \
         2>"$CURR_TTY")
     RET_MENU=$?
     NORM_RET_MENU
@@ -259,7 +261,7 @@ ${SEP}"
     [ $RET_MENU -eq 1 ]   && ExitAll
     [ $RET_MENU -eq 3 ]   && ExitAll
     [ $RET_MENU -eq 255 ] && ExitAll
-    if [ "$ITEM_SEL" = "8" ]; then
+    if [ "$ITEM_SEL" = "9" ]; then
         printf "\033c" > "$CURR_TTY"
         printf "[*] Reiniciando o EmulationStation...\n" > "$CURR_TTY"
         pkill -f "gptokeyb" 2>/dev/null || true
@@ -270,7 +272,7 @@ ${SEP}"
         exit 0
     fi
 
-    # Mapeia item selecionado para CATEGORIA (agora 1:1, sem desencontro)
+    # Mapeia item selecionado para CATEGORIA / funcao do modulo
     case "$ITEM_SEL" in
         1) CATEGORIA="1"; categoria_1 ;;
         2) CATEGORIA="2"; categoria_2 ;;
@@ -278,7 +280,8 @@ ${SEP}"
         4) CATEGORIA="4"; categoria_4 ;;
         5) CATEGORIA="5"; categoria_5 ;;   # backup_center
         6) categoria_6 ;;                  # interface_ui
-        7) categoria_7 ;;                  # atualizador
+        7) categoria_8 ;;                  # boot_image
+        8) categoria_7 ;;                  # update alter_mthemes
     esac
 
 done
