@@ -1,6 +1,6 @@
 #!/bin/bash
 # =========================================================
-# Alter_MThemes v7.0.4 - Customizador de Tema R36S
+# Alter_MThemes v7.0.5 - Customizador de Tema R36S
 # =========================================================
 
 if [ "$(id -u)" -ne 0 ]; then
