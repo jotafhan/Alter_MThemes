@@ -38,32 +38,6 @@ categoria_2() {
             return 0
         }
 
-        EscolherCorGrad() {
-            local _titulo="$1" ; local _var="$2"
-            DIALOG_MENU _OPCAO_G \
-                "$BT" " $_titulo " \
-                18 60 8 \
-                1 "Preto        (#000000)" \
-                2 "Azul Noite   (#0D1B2A)" \
-                3 "Roxo Escuro  (#0D0020)" \
-                4 "Verde Esc.   (#001A00)" \
-                5 "Grafite      (#1A1A1A)" \
-                6 "Azul Marinho (#001133)" \
-                7 "Ciano Esc.   (#001A1A)" \
-                8 "Personalizada (HEX)"
-            local RET_G=$? ; [ $RET_G -eq 255 ] && RET_G=3
-            [ $RET_G -eq 1 ] && ExitAll
-            [ $RET_G -eq 3 ] && { printf -v "$_var" \'\' ; return 1 ; }
-            case "$_OPCAO_G" in
-                1) printf -v "$_var" '000000' ;; 2) printf -v "$_var" '0D1B2A' ;;
-                3) printf -v "$_var" '0D0020' ;; 4) printf -v "$_var" '001A00' ;;
-                5) printf -v "$_var" '1A1A1A' ;; 6) printf -v "$_var" '001133' ;;
-                7) printf -v "$_var" '001A1A' ;;
-                8) GerarHexPicker "$_titulo" "$_var" || return 1 ;;
-            esac
-            return 0
-        }
-
         while true; do
 
             # Estado atual do scanline
@@ -72,18 +46,16 @@ categoria_2() {
 
             DIALOG_MENU MENU_VA \
                 "$BT" " VISUAL AVANCADO " \
-                24 68 11 \
+                24 68 9 \
                 1  "Wallpaper do Tema" \
                 2  "Scanlines (Efeito Retro)      [Ativo: $SCAN_ESTADO]" \
                 3  "Cor de Fundo do Tema" \
                 4  "Cor do Item Selecionado" \
                 5  "Opacidade de Elementos" \
-                6  "Gradiente de Fundo" \
-                7  "Blur / Desfoque de Fundo" \
-                8  "Cor de Destaque" \
-                9  "Transparencia dos Menus" \
-                10 "Efeito Glow (brilho RGB)" \
-                11 "Resetar Visual (restaurar XML)"
+                6  "Blur / Desfoque de Fundo" \
+                7  "Cor de Destaque" \
+                8  "Transparencia dos Menus" \
+                9  "Resetar Visual (restaurar XML)"
             RET=$?
             NORM_RET
             [ $RET -eq 1 ] && ExitAll
@@ -540,64 +512,8 @@ categoria_2() {
                 done
             fi
 
+            # Blur (6) - simulated via ImageMagick
             if [ "$MENU_VA" = "6" ]; then
-                while true; do
-                    DIALOG_MENU MENU_VA_GRAD \
-                        "$BT" " VISUAL AVANCADO > Gradiente " \
-                        16 62 5 \
-                        1 "Gradiente Vertical   (cima para baixo)" \
-                        2 "Gradiente Horizontal (esquerda p/ direita)" \
-                        3 "Gradiente Diagonal   (canto superior esq.)" \
-                        4 "Gradiente Radial     (centro para borda)" \
-                        5 "Gradiente de 3 Cores (tricolor)"
-                    RET=$?
-                    NORM_RET
-                    [ $RET -eq 1 ] && ExitAll
-                    [ $RET -eq 3 ] && break
-
-                    EscolherCorGrad "GRADIENTE - COR INICIAL" COR1 || continue
-                    EscolherCorGrad "GRADIENTE - COR FINAL"   COR2 || continue
-                    COR3=""
-                    if [ "$MENU_VA_GRAD" = "5" ]; then
-                        EscolherCorGrad "GRADIENTE - COR DO MEIO" COR3 || continue
-                    fi
-                    printf "\033c" > "$CURR_TTY"
-                    printf "[*] Gerando gradiente #%s -> #%s...\n" "$COR1" "$COR2" > "$CURR_TTY"
-                    GRAD_FILE="$GRAD_DIR/darkos_gradient.png"
-                    case "$MENU_VA_GRAD" in
-                        1) convert -size 640x480 gradient:"#${COR1}-#${COR2}" "$GRAD_FILE" 2>/dev/null ;;
-                        2) convert -size 640x480 gradient:"#${COR1}-#${COR2}" -rotate 90 "$GRAD_FILE" 2>/dev/null ;;
-                        3) convert -size 640x480 gradient:"#${COR1}-#${COR2}" -distort SRT 45 "$GRAD_FILE" 2>/dev/null ;;
-                        4) convert -size 640x480 radial-gradient:"#${COR1}-#${COR2}" "$GRAD_FILE" 2>/dev/null ;;
-                        5) convert -size 640x480 gradient:"#${COR1}-#${COR3}" /tmp/grad_a.png 2>/dev/null
-                           convert -size 640x480 gradient:"#${COR3}-#${COR2}" /tmp/grad_b.png 2>/dev/null
-                           convert /tmp/grad_a.png /tmp/grad_b.png -evaluate-sequence mean "$GRAD_FILE" 2>/dev/null
-                           rm -f /tmp/grad_a.png /tmp/grad_b.png 2>/dev/null ;;
-                    esac
-                    if [ ! -f "$GRAD_FILE" ]; then
-                        DIALOG_MSG "$BT" " ERRO " 9 55 \
-                            "Erro ao gerar gradiente.\n\nVerifique se o ImageMagick esta instalado."
-                        continue
-                    fi
-                    WP_REL="./_art/darkos_gradient.png"
-                    awk -v wp="$WP_REL" '
-                        /<image[^>]*name="background"/ { dentro_bg=1 }
-                        dentro_bg && $0 ~ /<path>/ {
-                            sub(/<path>[^<]*<\/path>/, "<path>"wp"<\/path>")
-                            dentro_bg=0 }
-                        /<\/image>/ { dentro_bg=0 }
-                        { print }
-                    ' "$XML_FILE" > "${XML_FILE}.tmp" && mv "${XML_FILE}.tmp" "$XML_FILE"
-                    sed -i -E "s|(<src>)[^<]*(</src>)|\\1${WP_REL}\\2|g" "$XML_FILE" 2>/dev/null || true
-                    DIALOG_MSG "$BT" " GRADIENTE APLICADO " 11 58 \
-                        "Gradiente gerado!\n\nCores: #$COR1 -> #$COR2\nArquivo: darkos_gradient.png\n\nReinicie o ES para ver a mudanca."
-                    PerguntarReiniciar
-                    break
-                done
-            fi
-
-            # Blur (7) - simulated via ImageMagick
-            if [ "$MENU_VA" = "7" ]; then
                 DIALOG_MENU OPCAO_BLUR \
                     "$BT" " BLUR DE FUNDO " \
                     14 60 4 \
@@ -664,8 +580,8 @@ categoria_2() {
                 PerguntarReiniciar
             fi
 
-            # Cor de Destaque (8)
-            if [ "$MENU_VA" = "8" ]; then
+            # Cor de Destaque (7)
+            if [ "$MENU_VA" = "7" ]; then
                 DIALOG_MENU OPCAO_DEST \
                     "$BT" " COR DE DESTAQUE " \
                     16 58 6 \
@@ -699,8 +615,8 @@ categoria_2() {
                 PerguntarReiniciar
             fi
 
-            # Transparencia dos Menus (9)
-            if [ "$MENU_VA" = "9" ]; then
+            # Transparencia dos Menus (8)
+            if [ "$MENU_VA" = "8" ]; then
                 DIALOG_MENU OPCAO_TRANSP \
                     "$BT" " TRANSPARENCIA DOS MENUS " \
                     14 58 4 \
@@ -738,52 +654,8 @@ categoria_2() {
                 PerguntarReiniciar
             fi
 
-            # Efeito Glow RGB (10)
-            if [ "$MENU_VA" = "10" ]; then
-                DIALOG_MENU OPCAO_GLOW \
-                    "$BT" " EFEITO GLOW RGB " \
-                    14 62 4 \
-                    1 "Sem Glow       (remover efeito)" \
-                    2 "Glow Suave     (brilho leve nas bordas)" \
-                    3 "Glow Medio     (brilho visivel)" \
-                    4 "Glow Intenso   (brilho forte)"
-                RET=$? ; NORM_RET ; [ $RET -eq 1 ] && ExitAll ; [ $RET -eq 3 ] && continue
-
-                case "$OPCAO_GLOW" in
-                    1) GLOW_OP="0"   ; GLOW_RAD="0"  ; DESC_GLOW="Sem Glow" ;;
-                    2) GLOW_OP="0.3" ; GLOW_RAD="3"  ; DESC_GLOW="Suave" ;;
-                    3) GLOW_OP="0.6" ; GLOW_RAD="6"  ; DESC_GLOW="Medio" ;;
-                    4) GLOW_OP="1.0" ; GLOW_RAD="10" ; DESC_GLOW="Intenso" ;;
-                    *) continue ;;
-                esac
-
-                printf "\033c" > "$CURR_TTY"
-                # Glow via glowOpacity e glowSize no XML (suportado em alguns ES builds)
-                if grep -q "<glowOpacity>" "$XML_FILE" 2>/dev/null; then
-                    sed -i -E "s|<glowOpacity>[^<]*</glowOpacity>|<glowOpacity>${GLOW_OP}</glowOpacity>|g" \
-                        "$XML_FILE" 2>/dev/null || true
-                    sed -i -E "s|<glowSize>[^<]*</glowSize>|<glowSize>${GLOW_RAD}</glowSize>|g" \
-                        "$XML_FILE" 2>/dev/null || true
-                else
-                    # Insere tags de glow nos blocos de texto
-                    awk -v op="$GLOW_OP" -v sz="$GLOW_RAD" '
-                        /<textlist[^>]*name="gamelist"/ { dentro=1 }
-                        /<\/textlist>/ { dentro=0 }
-                        dentro && /<\/textlist>/ {
-                            print "        <glowOpacity>"op"</glowOpacity>"
-                            print "        <glowSize>"sz"</glowSize>"
-                        }
-                        { print }
-                    ' "$XML_FILE" > "${XML_FILE}.tmp" && mv "${XML_FILE}.tmp" "$XML_FILE"
-                fi
-
-                DIALOG_MSG "$BT" " GLOW APLICADO " 11 58 \
-                    "Efeito Glow configurado!\n\nIntensidade: $DESC_GLOW\nOpacidade: $GLOW_OP  Raio: $GLOW_RAD\n\nObs: suporte depende da versao do ES.\nReinicie o ES para ver a mudanca."
-                PerguntarReiniciar
-            fi
-
-            # Resetar Visual (11)
-            if [ "$MENU_VA" = "11" ]; then
+            # Resetar Visual (9)
+            if [ "$MENU_VA" = "9" ]; then
                 if [ ! -f "${XML_FILE}.bak" ]; then
                     DIALOG_MSG "$BT" " RESETAR VISUAL " 9 55 \
                         "Nenhum backup encontrado!\n\nO backup e criado automaticamente\nao abrir o script."
