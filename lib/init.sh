@@ -43,7 +43,6 @@ fi
 
 # Backup automático ao abrir (se ativado pelo usuário)
 cp "$XML_FILE" "${XML_FILE}.bak" 2>/dev/null || true
-cp "$XML_FILE" "${XML_FILE}.bak.$(date +%Y%m%d_%H%M%S)" 2>/dev/null || true
 
 # Verifica agendamento de backup automático
 _SCHED_FILE="$BACKUP_DIR/.backup_schedule"

@@ -523,6 +523,6 @@ Backups com FALHOU devem ser descartados."
                 fi
             fi
 
-        done  # fim while categoria 6
+        done  # fim while categoria 5
     fi  # fim if CATEGORIA=5
 }

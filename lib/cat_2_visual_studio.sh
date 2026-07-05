@@ -2,9 +2,6 @@
 categoria_2() {
     if [ "$CATEGORIA" = "2" ]; then
         TEMA_DIR=$(dirname "$XML_FILE")
-        GRAD_DIR="$TEMA_DIR/_art"
-        mkdir -p "$GRAD_DIR" 2>/dev/null || true
-
         GerarHexPicker() {
             local _titulo="$1" ; local _var="$2"
             local HEX_BUILD="" ; local HEX_ABORTADO=0
