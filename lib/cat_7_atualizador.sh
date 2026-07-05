@@ -35,6 +35,7 @@ ARQUIVOS_ATUALIZAVEIS=(
     "lib/cat_4_theme_hub.sh|lib/cat_4_theme_hub.sh"
     "lib/cat_5_backup_center.sh|lib/cat_5_backup_center.sh"
     "lib/cat_6_interface_ui.sh|lib/cat_6_interface_ui.sh"
+    "lib/cat_8_boot_image.sh|lib/cat_8_boot_image.sh"
     "lib/cat_7_atualizador.sh|lib/cat_7_atualizador.sh"
     "lib/menu_aparencia.cfg|lib/menu_aparencia.cfg"
     "lib/menu_dialogrc|lib/menu_dialogrc"
@@ -288,112 +289,6 @@ $BAK_DIR" \
 }
 
 # -----------------------------------------------------------
-# SUB: Configurar URL do servidor
-# -----------------------------------------------------------
-_upd_configurar_url() {
-    local URL_ATUAL
-    URL_FILE="$SCRIPT_DIR/lib/update_url.cfg"
-    [ -f "$URL_FILE" ] && UPDATE_BASE_URL=$(cat "$URL_FILE" 2>/dev/null | tr -d '[:space:]')
-
-    local OPCAO
-    OPCAO=$(dialog --output-fd 1 \
-        --backtitle "$(_menu_preview_backtitle 2>/dev/null || echo "$APP_NAME $APP_VER")" \
-        --title " Servidor de Atualizacoes " \
-        --ok-label "OK" --cancel-label "Voltar" \
-        --menu \
-"URL atual: ${UPDATE_BASE_URL:-nao configurada}
-
-Escolha o servidor:" \
-        18 72 5 \
-        "1" "GitHub (usuario/repositorio publico)" \
-        "2" "GitHub RAW — colar URL completa" \
-        "3" "Servidor proprio — colar URL" \
-        "4" "Ver URL atual" \
-        "5" "Limpar configuracao" \
-        2>"$CURR_TTY")
-    [ $? -ne 0 ] && return
-
-    case "$OPCAO" in
-        1|2|3)
-            local MSG
-            case "$OPCAO" in
-                1) MSG="Digite no formato:\nhttps://raw.githubusercontent.com/USUARIO/REPO/main" ;;
-                2) MSG="Cole a URL RAW completa do GitHub:" ;;
-                3) MSG="Digite a URL base do seu servidor:" ;;
-            esac
-            # Como nao ha teclado fisico, mostra instrucoes para editar via SSH
-            dialog --output-fd 1 \
-                --backtitle "$(_menu_preview_backtitle 2>/dev/null || echo "$APP_NAME $APP_VER")" \
-                --title " Configurar URL " \
-                --msgbox \
-"Para configurar a URL, edite via SSH:
-
-echo 'SUA_URL_AQUI' > $URL_FILE
-
-Exemplo GitHub:
-echo 'https://raw.githubusercontent.com/USUARIO/REPO/main' > $URL_FILE
-
-Atual: ${UPDATE_BASE_URL:-nao configurada}" \
-                14 68 2>"$CURR_TTY" ;;
-        4)
-            dialog --output-fd 1 \
-                --backtitle "$(_menu_preview_backtitle 2>/dev/null || echo "$APP_NAME $APP_VER")" \
-                --title " URL Atual " \
-                --msgbox "URL configurada:\n${UPDATE_BASE_URL:-nao configurada}\n\nVersao local: ${VERSION_LOCAL}" \
-                8 68 2>"$CURR_TTY" ;;
-        5)
-            rm -f "$URL_FILE" 2>/dev/null
-            UPDATE_BASE_URL=""
-            dialog --output-fd 1 \
-                --backtitle "$(_menu_preview_backtitle 2>/dev/null || echo "$APP_NAME $APP_VER")" \
-                --title " URL Removida " \
-                --msgbox "Configuracao de URL removida." \
-                6 40 2>"$CURR_TTY" ;;
-    esac
-
-    # Recarrega URL se arquivo existir
-    [ -f "$URL_FILE" ] && UPDATE_BASE_URL=$(cat "$URL_FILE" 2>/dev/null | tr -d '[:space:]')
-}
-
-# -----------------------------------------------------------
-# SUB: Ver historico de atualizacoes
-# -----------------------------------------------------------
-_upd_historico() {
-    local BAKS
-    BAKS=$(find "$SCRIPT_DIR/lib" -maxdepth 1 -name "backups_update_*" \
-        -type d 2>/dev/null | sort -r)
-
-    if [ -z "$BAKS" ]; then
-        dialog --output-fd 1 \
-            --backtitle "$(_menu_preview_backtitle 2>/dev/null || echo "$APP_NAME $APP_VER")" \
-            --title " Historico " \
-            --msgbox "Nenhuma atualizacao anterior encontrada." \
-            6 48 2>"$CURR_TTY"
-        return
-    fi
-
-    local INFO=""
-    while IFS= read -r bdir; do
-        local NOME=$(basename "$bdir")
-        local QTD=$(find "$bdir" -type f | wc -l)
-        local DATA=${NOME#backups_update_}
-        INFO="${INFO}• ${DATA}  (${QTD} arquivo(s))\n"
-    done <<< "$BAKS"
-
-    dialog --output-fd 1 \
-        --backtitle "$(_menu_preview_backtitle 2>/dev/null || echo "$APP_NAME $APP_VER")" \
-        --title " Historico de Atualizacoes " \
-        --msgbox "Atualizacoes anteriores:\n\n${INFO}\nVersao atual: $VERSION_LOCAL" \
-        16 60 2>"$CURR_TTY"
-}
-
-# -----------------------------------------------------------
-# Carrega URL customizada se existir
-# -----------------------------------------------------------
-URL_FILE="$SCRIPT_DIR/lib/update_url.cfg"
-[ -f "$URL_FILE" ] && UPDATE_BASE_URL=$(cat "$URL_FILE" 2>/dev/null | tr -d '[:space:]')
-
-# -----------------------------------------------------------
 # ENTRY POINT
 # -----------------------------------------------------------
 categoria_7() {
@@ -401,19 +296,18 @@ categoria_7() {
         local OPCAO
         OPCAO=$(dialog --output-fd 1 \
             --backtitle "$(_menu_preview_backtitle 2>/dev/null || echo "$APP_NAME $APP_VER")" \
-            --title " Atualizador " \
+            --title " Update Alter_MThemes " \
             --ok-label "OK" \
             --extra-button --extra-label "VOLTAR" \
             --cancel-label "SAIR" \
             --menu \
 "Versao local: $VERSION_LOCAL
 Servidor   : ${UPDATE_BASE_URL:-nao configurado}" \
-            18 68 5 \
+            18 68 4 \
             1 "Verificar e Instalar Atualizacoes" \
-            2 "Configurar Servidor de Atualizacoes" \
-            3 "Historico de Atualizacoes" \
-            4 "Forcar Reverter para Backup" \
-            5 "Voltar ao Menu Principal" \
+            2 "Historico de Atualizacoes" \
+            3 "Forcar Reverter para Backup" \
+            4 "Voltar ao Menu Principal" \
             2>"$CURR_TTY")
         local RET=$?
         NORM_RET_MENU
@@ -421,9 +315,8 @@ Servidor   : ${UPDATE_BASE_URL:-nao configurado}" \
 
         case "$OPCAO" in
             1) _upd_verificar ;;
-            2) _upd_configurar_url ;;
-            3) _upd_historico ;;
-            4)
+            2) _upd_historico ;;
+            3)
                 local BAKS_LIST
                 BAKS_LIST=$(find "$SCRIPT_DIR/lib" -maxdepth 1 \
                     -name "backups_update_*" -type d 2>/dev/null | sort -r | head -5)
@@ -457,7 +350,7 @@ Servidor   : ${UPDATE_BASE_URL:-nao configurado}" \
                             7 50 2>"$CURR_TTY"
                     fi
                 fi ;;
-            5) break ;;
+            4) break ;;
         esac
     done
 }
