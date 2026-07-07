@@ -43,6 +43,7 @@ fi
 
 # Backup automático ao abrir (se ativado pelo usuário)
 cp "$XML_FILE" "${XML_FILE}.bak" 2>/dev/null || true
+cp "$XML_FILE" "${XML_FILE}.bak.$(date +%Y%m%d_%H%M%S)" 2>/dev/null || true
 
 # Verifica agendamento de backup automático
 _SCHED_FILE="$BACKUP_DIR/.backup_schedule"
@@ -81,6 +82,6 @@ ReiniciarES() {
     printf "\033c" > "$CURR_TTY"
     printf "[*] Reiniciando EmulationStation...\n" > "$CURR_TTY"
     sleep 1.5
-    sudo systemctl restart emulationstation
+    systemctl restart emulationstation
     ExitAll
 }

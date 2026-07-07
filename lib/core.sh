@@ -307,6 +307,52 @@ AplicarEmBloco() {
     esac
 }
 
+
+# ---------------------------------------------------------
+# _detectar_usb  —  detecta pendrives/cartões montados
+# Preenche array global _USB_MOUNTS com os pontos de montagem
+# Retorna 0 se encontrou ao menos um, 1 se nenhum
+# Uso:
+#   _detectar_usb
+#   [ ${#_USB_MOUNTS[@]} -eq 0 ] && { msg "sem usb"; continue; }
+# ---------------------------------------------------------
+_detectar_usb() {
+    mapfile -t _USB_MOUNTS < <(
+        mount 2>/dev/null \
+        | grep -E '/dev/sd[b-z]|/dev/mmcblk[1-9]' \
+        | awk '{print $3}' \
+        | sort -u
+    )
+    [ ${#_USB_MOUNTS[@]} -gt 0 ] && return 0 || return 1
+}
+
+# ---------------------------------------------------------
+# _selecionar_usb  —  se houver mais de um mount, abre menu
+# para o usuário escolher qual usar.
+# Preenche _USB_PATH com o caminho escolhido.
+# Retorna 0 em sucesso, 3 se VOLTAR, 1 se SAIR.
+# Requer _detectar_usb ter sido chamado antes.
+# ---------------------------------------------------------
+_selecionar_usb() {
+    if [ ${#_USB_MOUNTS[@]} -eq 1 ]; then
+        _USB_PATH="${_USB_MOUNTS[0]}"
+        return 0
+    fi
+    local LISTA_USB=() IDX=1
+    for _m in "${_USB_MOUNTS[@]}"; do
+        LISTA_USB+=("$IDX" "$_m")
+        IDX=$(( IDX + 1 ))
+    done
+    local _SEL
+    DIALOG_MENU _SEL "$BT" " SELECIONAR PENDRIVE " 14 55 6 "${LISTA_USB[@]}"
+    local RET=$?
+    NORM_RET
+    [ $RET -eq 1 ] && ExitAll
+    [ $RET -eq 3 ] && return 3
+    _USB_PATH="${_USB_MOUNTS[$(( _SEL - 1 ))]}"
+    return 0
+}
+
 DESC_ALVO_NOME() {
     case "$1" in
         1) echo "Todos os blocos" ;;

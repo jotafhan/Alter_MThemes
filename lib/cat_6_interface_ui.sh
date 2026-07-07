@@ -505,11 +505,9 @@ _m6_temas_prontos() {
         *)                        NOME_ATUAL="$(_tema_descricao "$ATUAL")" ;;
     esac
 
-    local TMPF
-    TMPF=$(mktemp /tmp/alter_menu.XXXXXX)
-
     while true; do
-        dialog \
+        local ESCOLHA
+        ESCOLHA=$(dialog --output-fd 1 \
             --backtitle "$(_menu_preview_backtitle)" \
             --title " Temas Pre-Prontos " \
             --ok-label "Aplicar" \
@@ -525,10 +523,8 @@ _m6_temas_prontos() {
             "vermelho_hacker"    "$(_tema_descricao vermelho_hacker)" \
             "ciano_noturno"      "$(_tema_descricao ciano_noturno)" \
             "padrao_sistema"     "$(_tema_descricao padrao_sistema)" \
-            2>"$TMPF" 1>"$CURR_TTY"
+            2>"$CURR_TTY")
         local RET=$?
-        local ESCOLHA
-        ESCOLHA=$(cat "$TMPF" 2>/dev/null)
 
         [ $RET -eq 1 ] || [ $RET -eq 255 ] && break
 
@@ -544,7 +540,6 @@ _m6_temas_prontos() {
         break
     done
 
-    rm -f "$TMPF" 2>/dev/null
 }
 
 

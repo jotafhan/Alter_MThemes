@@ -988,44 +988,13 @@ categoria_1() {
         # ==============================================================
         if [ "$MENU_FONTE" = "7" ]; then
             # Detecta pontos de montagem de pendrive
-            mapfile -t _USB_MOUNTS < <(
-                mount 2>/dev/null \
-                | grep -E '/dev/sd[b-z]|/dev/mmcblk[1-9]' \
-                | awk '{print $3}' \
-                | sort -u
-            )
-
-            if [ ${#_USB_MOUNTS[@]} -eq 0 ]; then
+            if ! _detectar_usb; then
                 DIALOG_MSG "$BT" " INSTALAR VIA USB " 10 58 \
                     "Nenhum pendrive/cartao detectado!\n\nInsira o USB com as fontes e\ntente novamente."
                 continue
             fi
-
-            # Se houver mais de um mount, pergunta qual
-            if [ ${#_USB_MOUNTS[@]} -eq 1 ]; then
-                _USB_PATH="${_USB_MOUNTS[0]}"
-            else
-                LISTA_USB=()
-                IDX=1
-                for m in "${_USB_MOUNTS[@]}"; do
-                    LISTA_USB+=("$IDX" "$m")
-                    IDX=$((IDX + 1))
-                done
-                OPCAO_USB=$(dialog --output-fd 1 \
-                    --backtitle "$BT" \
-                    --title " SELECIONAR PENDRIVE " \
-                    --ok-label "OK" \
-                    --extra-button --extra-label "VOLTAR" \
-                    --cancel-label "SAIR" \
-                    --menu "Selecione o dispositivo USB:" \
-                    14 55 6 \
-                    "${LISTA_USB[@]}" \
-                    2>"$CURR_TTY")
-                RET=$? ; NORM_RET
-                [ $RET -eq 1 ] && ExitAll
-                [ $RET -eq 3 ] && continue
-                _USB_PATH="${_USB_MOUNTS[$((OPCAO_USB-1))]}"
-            fi
+            _selecionar_usb
+            local RET_USB=$? ; [ $RET_USB -eq 1 ] && ExitAll ; [ $RET_USB -eq 3 ] && continue
 
             # Busca fontes no USB (raiz e subpastas)
             mapfile -t USB_FONTS < <(find "$_USB_PATH" \

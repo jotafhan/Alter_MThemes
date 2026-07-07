@@ -12,7 +12,7 @@ categoria_3() {
             NUM_LOGOS_USER=$(find "$LOGOS_DIR" -maxdepth 1 \
                 -type f \( -iname "*.png" -o -iname "*.svg" \) 2>/dev/null | wc -l)
             NUM_LOGOS_BAK=$(find "$LOGOS_BAK_DIR" -maxdepth 1 \
-                -type f -o -type d -mindepth 1 2>/dev/null | wc -l)
+                -mindepth 1 -type d 2>/dev/null | wc -l)
 
             DIALOG_MENU MENU_LOGO \
     "$BT" " LOGOS DOS SISTEMAS " \
@@ -246,6 +246,14 @@ categoria_3() {
                 if ! ping -c 1 -W 3 8.8.8.8 >/dev/null 2>&1; then
                     DIALOG_MSG "$BT" " SEM INTERNET " 9 55 \
                         "Sem conexao com a internet!\n\nConecte o R36S ao Wi-Fi\ne tente novamente."
+                    continue
+                fi
+
+                # Verifica espaco livre antes de baixar (~50MB de margem)
+                _LIVRE_KB=$(df -k "$LOGOS_DIR" 2>/dev/null | awk 'NR==2{print $4}' || echo "0")
+                if [ "$_LIVRE_KB" -lt 51200 ] 2>/dev/null; then
+                    DIALOG_MSG "$BT" " ESPACO INSUFICIENTE " 10 58 \
+                        "Espaco livre insuficiente para o download!\n\nLivre: $(( _LIVRE_KB / 1024 ))MB\nNecessario: ~50MB\n\nLibere espaco e tente novamente."
                     continue
                 fi
 

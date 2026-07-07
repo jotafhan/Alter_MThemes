@@ -280,21 +280,19 @@ $DIFF_TAGS"
             fi
 
             if [ "$MENU_GER" = "9" ]; then
-                mapfile -t PENDRIVES < <(find /media /mnt -maxdepth 2 -type d -writable 2>/dev/null \
-                    | grep -v "^/mnt/user\|^/media$\|^/mnt$")
-                if [ ${#PENDRIVES[@]} -eq 0 ]; then
+                if ! _detectar_usb; then
                     DIALOG_MSG "$BT" " EXPORTAR " 10 60 \
                         "Nenhum pendrive detectado!\n\nConecte um pendrive e tente novamente."
                     continue
                 fi
+                _selecionar_usb
+                local RET_USB=$? ; [ $RET_USB -eq 1 ] && ExitAll ; [ $RET_USB -eq 3 ] && continue
                 LISTA_PD=() ; IDX=1
-                for pd in "${PENDRIVES[@]}"; do
+                for pd in "${_USB_MOUNTS[@]}"; do
                     ESP_PD=$(df -h "$pd" 2>/dev/null | awk 'NR==2{print $4}' || echo "?")
                     LISTA_PD+=("$IDX" "$pd  (livre: $ESP_PD)") ; IDX=$((IDX+1))
                 done
-                DIALOG_MENU PD_IDX "$BT" " ESCOLHA O DESTINO " 14 68 5 "${LISTA_PD[@]}"
-                RET=$? ; NORM_RET ; [ $RET -eq 1 ] && ExitAll ; [ $RET -eq 3 ] && continue
-                PD_DEST="${PENDRIVES[$((PD_IDX-1))]}/darkos_backups"
+                PD_DEST="${_USB_PATH}/darkos_backups"
                 mkdir -p "$PD_DEST" 2>/dev/null || true
                 printf "\033c" > "$CURR_TTY" ; printf "[*] Exportando backups...\n" > "$CURR_TTY"
                 EXPORTADOS=0

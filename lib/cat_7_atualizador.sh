@@ -13,6 +13,13 @@
 # qualquer commit novo aparece imediatamente (jsDelivr pode demorar
 # minutos/horas para sincronizar o cache do branch @main).
 UPDATE_BASE_URL="https://raw.githubusercontent.com/jotafhan/Alter_MThemes/main"
+# Permite sobrescrever a URL sem editar o script:
+# crie lib/update_url.cfg contendo apenas a URL base
+_UPD_URL_FILE="$SCRIPT_DIR/lib/update_url.cfg"
+[ -f "$_UPD_URL_FILE" ] && {
+    _URL_CUSTOM=$(cat "$_UPD_URL_FILE" 2>/dev/null | tr -d '[:space:]')
+    [ -n "$_URL_CUSTOM" ] && UPDATE_BASE_URL="$_URL_CUSTOM"
+}
 # Exemplo GitHub (alternativa via jsDelivr, com cache):
 # UPDATE_BASE_URL="https://cdn.jsdelivr.net/gh/USUARIO/REPO@main"
 # Exemplo servidor proprio:
@@ -149,6 +156,17 @@ _upd_verificar() {
         --title " Verificando Arquivos " \
         --infobox "Nova versao encontrada: $VERSION_REMOTA\nAnalisando arquivos modificados..." \
         6 55 2>"$CURR_TTY"
+
+    # Verifica espaco livre antes de baixar (~10MB de margem)
+    _LIVRE_KB=$(df -k "$SCRIPT_DIR" 2>/dev/null | awk 'NR==2{print $4}' || echo "0")
+    if [ "$_LIVRE_KB" -lt 10240 ] 2>/dev/null; then
+        dialog --output-fd 1 \
+            --backtitle "$(_menu_preview_backtitle 2>/dev/null || echo "$APP_NAME $APP_VER")" \
+            --title " Espaco Insuficiente " \
+            --msgbox "Espaco livre insuficiente para a atualizacao!\n\nLivre: $(( _LIVRE_KB / 1024 ))MB\nNecessario: ~10MB\n\nLibere espaco e tente novamente." \
+            10 60 2>"$CURR_TTY"
+        return 1
+    fi
 
     ARQUIVOS_PARA_ATUALIZAR=()
     TMPS_PARA_ATUALIZAR=()
