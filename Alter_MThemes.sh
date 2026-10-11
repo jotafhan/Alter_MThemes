@@ -1,6 +1,6 @@
 #!/bin/bash
 # =========================================================
-# Alter_MThemes v7.0.3 - Customizador de Tema R36S
+# Alter_MThemes v7.1.0 - Customizador de Tema R36S
 # =========================================================
 
 if [ "$(id -u)" -ne 0 ]; then
@@ -113,7 +113,7 @@ for MOD in "${MODULOS[@]}"; do
 done
 
 APP_NAME="Alter_MThemes"
-APP_VER="v7.0.3"
+APP_VER="v7.1.0"
 
 # ==========================================================
 # LOOP DO MENU PRINCIPAL
