@@ -1,6 +1,13 @@
 # cat_3_logos.sh - Logos dos Sistemas
 categoria_3() {
     if [ "$CATEGORIA" = "3" ]; then
+    # Guarda: verifica se XML_FILE foi resolvido pelo init.sh
+    if [ -z "$XML_FILE" ] || [ ! -f "$XML_FILE" ]; then
+        DIALOG_MSG "$BT" " ERRO - TEMA NAO ENCONTRADO " 10 60 \
+            "Nao foi possivel localizar o arquivo XML do tema.\n\nTema ativo: ${THEME_NAME:-desconhecido}\n\nVerifique se o EmulationStation esta instalado\ne se o tema esta configurado corretamente."
+        return 1
+    fi
+
         TEMA_DIR=$(dirname "$XML_FILE")
         LOGOS_DIR="/home/ark/darkos_logos"
         LOGOS_BAK_DIR="/home/ark/darkos_backups/logos"

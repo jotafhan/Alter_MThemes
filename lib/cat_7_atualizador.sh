@@ -36,17 +36,16 @@ ARQUIVOS_ATUALIZAVEIS=(
     "Alter_MThemes.sh|Alter_MThemes.sh"
     "lib/core.sh|lib/core.sh"
     "lib/init.sh|lib/init.sh"
+    "lib/validator.sh|lib/validator.sh"
     "lib/cat_1_font_studio.sh|lib/cat_1_font_studio.sh"
     "lib/cat_2_visual_studio.sh|lib/cat_2_visual_studio.sh"
     "lib/cat_3_logo_center.sh|lib/cat_3_logo_center.sh"
     "lib/cat_4_theme_hub.sh|lib/cat_4_theme_hub.sh"
     "lib/cat_5_backup_center.sh|lib/cat_5_backup_center.sh"
     "lib/cat_6_interface_ui.sh|lib/cat_6_interface_ui.sh"
-    "lib/cat_8_boot_image.sh|lib/cat_8_boot_image.sh"
     "lib/cat_7_atualizador.sh|lib/cat_7_atualizador.sh"
-    "lib/menu_aparencia.cfg|lib/menu_aparencia.cfg"
-    "lib/menu_dialogrc|lib/menu_dialogrc"
-    "lib/validator.sh|lib/validator.sh"
+    "lib/cat_8_boot_image.sh|lib/cat_8_boot_image.sh"
+    "lib/version.txt|lib/version.txt"
 )
 
 # -----------------------------------------------------------
@@ -104,6 +103,18 @@ _upd_diferente() {
 # SUB: Verificar atualizacoes disponiveis
 # -----------------------------------------------------------
 _upd_verificar() {
+    # Verifica espaco livre antes de qualquer operacao de rede (~10MB de margem)
+    local _LIVRE_KB
+    _LIVRE_KB=$(df -k "$SCRIPT_DIR" 2>/dev/null | awk 'NR==2{print $4}' || echo "0")
+    if [ "$_LIVRE_KB" -lt 10240 ] 2>/dev/null; then
+        dialog --output-fd 1 \
+            --backtitle "$(_menu_preview_backtitle 2>/dev/null || echo "$APP_NAME $APP_VER")" \
+            --title " Espaco Insuficiente " \
+            --msgbox "Espaco livre insuficiente para a atualizacao!\n\nLivre: $(( _LIVRE_KB / 1024 ))MB\nNecessario: ~10MB\n\nLibere espaco e tente novamente." \
+            10 60 2>"$CURR_TTY"
+        return 1
+    fi
+
     dialog --output-fd 1 \
         --backtitle "$(_menu_preview_backtitle 2>/dev/null || echo "$APP_NAME $APP_VER")" \
         --title " Verificando... " \
@@ -156,17 +167,6 @@ _upd_verificar() {
         --title " Verificando Arquivos " \
         --infobox "Nova versao encontrada: $VERSION_REMOTA\nAnalisando arquivos modificados..." \
         6 55 2>"$CURR_TTY"
-
-    # Verifica espaco livre antes de baixar (~10MB de margem)
-    _LIVRE_KB=$(df -k "$SCRIPT_DIR" 2>/dev/null | awk 'NR==2{print $4}' || echo "0")
-    if [ "$_LIVRE_KB" -lt 10240 ] 2>/dev/null; then
-        dialog --output-fd 1 \
-            --backtitle "$(_menu_preview_backtitle 2>/dev/null || echo "$APP_NAME $APP_VER")" \
-            --title " Espaco Insuficiente " \
-            --msgbox "Espaco livre insuficiente para a atualizacao!\n\nLivre: $(( _LIVRE_KB / 1024 ))MB\nNecessario: ~10MB\n\nLibere espaco e tente novamente." \
-            10 60 2>"$CURR_TTY"
-        return 1
-    fi
 
     ARQUIVOS_PARA_ATUALIZAR=()
     TMPS_PARA_ATUALIZAR=()

@@ -1,6 +1,13 @@
 # cat_4_temas_prontos.sh - Temas Prontos
 categoria_4() {
     if [ "$CATEGORIA" = "4" ]; then
+    # Guarda: verifica se XML_FILE foi resolvido pelo init.sh
+    if [ -z "$XML_FILE" ] || [ ! -f "$XML_FILE" ]; then
+        DIALOG_MSG "$BT" " ERRO - TEMA NAO ENCONTRADO " 10 60 \
+            "Nao foi possivel localizar o arquivo XML do tema.\n\nTema ativo: ${THEME_NAME:-desconhecido}\n\nVerifique se o EmulationStation esta instalado\ne se o tema esta configurado corretamente."
+        return 1
+    fi
+
 
         # Função que aplica um tema completo de uma vez
         AplicarTemaPronto() {

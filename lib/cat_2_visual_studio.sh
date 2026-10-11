@@ -1,6 +1,13 @@
 # cat_2_visual_avancado.sh - Visual Avancado
 categoria_2() {
     if [ "$CATEGORIA" = "2" ]; then
+    # Guarda: verifica se XML_FILE foi resolvido pelo init.sh
+    if [ -z "$XML_FILE" ] || [ ! -f "$XML_FILE" ]; then
+        DIALOG_MSG "$BT" " ERRO - TEMA NAO ENCONTRADO " 10 60 \
+            "Nao foi possivel localizar o arquivo XML do tema.\n\nTema ativo: ${THEME_NAME:-desconhecido}\n\nVerifique se o EmulationStation esta instalado\ne se o tema esta configurado corretamente."
+        return 1
+    fi
+
         TEMA_DIR=$(dirname "$XML_FILE")
         GerarHexPicker() {
             local _titulo="$1" ; local _var="$2"
